@@ -386,6 +386,36 @@
       font-size: 15px;
       font-weight: 800;
     }
+    .result-review {
+      margin: 0 0 24px;
+      text-align: left;
+    }
+    .result-review h3 { margin: 0 0 12px; font-size: 18px; }
+    .review-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding-left: 26px;
+    }
+    .review-item {
+      padding: 13px 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--card);
+      overflow-wrap: anywhere;
+    }
+    .review-item::marker { color: var(--accent); font-weight: 800; }
+    .review-question { margin: 0 0 8px; font-size: 15px; line-height: 1.45; }
+    .review-status { margin: 0 0 8px; font-weight: 800; }
+    .review-status.is-correct { color: var(--correct); }
+    .review-status.is-incorrect { color: var(--wrong); }
+    .review-answer, .review-fact { margin: 4px 0; font-size: 13px; line-height: 1.55; }
+    .review-fact {
+      margin-top: 9px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+    }
     .restart { margin: 0 auto; }
     .confetti {
       position: fixed;
@@ -418,6 +448,8 @@
       body { padding: 20px 14px; }
       .card { padding: 24px 19px; border-radius: 17px; }
       .hint { max-width: 145px; line-height: 1.4; }
+      .review-list { padding-left: 22px; }
+      .review-item { padding: 12px; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
@@ -480,6 +512,7 @@
     let current = 0;
     let points = 0;
     let locked = false;
+    let selectedAnswers = [];
     const progress = document.querySelector('[role="progressbar"]');
 
     function renderQuestion() {
@@ -514,6 +547,7 @@
       if (locked) return;
       locked = true;
       const item = questions[current];
+      selectedAnswers[current] = index;
       const isCorrect = index === item.correct;
       const buttons = [...$("answers").querySelectorAll(".answer")];
       buttons.forEach((button, i) => {
@@ -550,6 +584,41 @@
             ? ["🪐", "Nice orbit!", "You’re finding your way among the stars. Keep that curiosity shining."]
             : ["🌱", "Future astronaut!", "Every great explorer starts with a first mission. Ready for another?"];
       $("result").innerHTML = `<span class="result-emoji" aria-hidden="true">${mood[0]}</span><h2>${mood[1]}</h2><p>${mood[2]}</p><div class="result-score">⭐ ${points} / ${questions.length} correct</div><button class="next restart" id="restart" type="button">Blast off again <span aria-hidden="true">↻</span></button>`;
+      const review = document.createElement("section");
+      review.className = "result-review";
+      review.setAttribute("aria-labelledby", "review-heading");
+      const reviewHeading = document.createElement("h3");
+      reviewHeading.id = "review-heading";
+      reviewHeading.textContent = "Answer review";
+      const reviewList = document.createElement("ol");
+      reviewList.className = "review-list";
+      questions.forEach((item, index) => {
+        const selectedIndex = selectedAnswers[index];
+        const isCorrect = selectedIndex === item.correct;
+        const entry = document.createElement("li");
+        entry.className = "review-item";
+        const question = document.createElement("h4");
+        question.className = "review-question";
+        question.textContent = item.question;
+        const status = document.createElement("p");
+        status.className = `review-status ${isCorrect ? "is-correct" : "is-incorrect"}`;
+        status.textContent = isCorrect ? "Correct" : "Incorrect";
+        const selected = document.createElement("p");
+        selected.className = "review-answer";
+        selected.textContent = `Your answer: ${selectedIndex === undefined ? "Not answered" : item.answers[selectedIndex]}`;
+        const correct = document.createElement("p");
+        correct.className = "review-answer";
+        correct.textContent = `Correct answer: ${item.answers[item.correct]}`;
+        const fact = document.createElement("p");
+        fact.className = "review-fact";
+        const factLabel = document.createElement("strong");
+        factLabel.textContent = "Fact: ";
+        fact.append(factLabel, document.createTextNode(item.fact));
+        entry.append(question, status, selected, correct, fact);
+        reviewList.append(entry);
+      });
+      review.append(reviewHeading, reviewList);
+      $("result").append(review, $("restart"));
       $("result").hidden = false;
       $("restart").addEventListener("click", restart);
       if (percent >= .7) burst(42);
@@ -558,6 +627,7 @@
     function restart() {
       current = 0;
       points = 0;
+      selectedAnswers = [];
       $("result").hidden = true;
       $("quiz").hidden = false;
       renderQuestion();
