@@ -378,7 +378,7 @@
     .result p { max-width: 360px; margin: 0 auto 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
     .result-score {
       display: inline-block;
-      margin-bottom: 23px;
+      margin-bottom: 18px;
       padding: 10px 17px;
       border-radius: 999px;
       color: var(--accent);
@@ -386,7 +386,21 @@
       font-size: 15px;
       font-weight: 800;
     }
-    .restart { margin: 0 auto; }
+    .result-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .restart { margin: 0; }
+    .result .share-status {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .share-status[data-state="error"] { color: var(--wrong); }
+    .share-status[hidden] { display: none; }
     .confetti {
       position: fixed;
       z-index: 3;
@@ -549,10 +563,43 @@
           : percent >= .4
             ? ["🪐", "Nice orbit!", "You’re finding your way among the stars. Keep that curiosity shining."]
             : ["🌱", "Future astronaut!", "Every great explorer starts with a first mission. Ready for another?"];
-      $("result").innerHTML = `<span class="result-emoji" aria-hidden="true">${mood[0]}</span><h2>${mood[1]}</h2><p>${mood[2]}</p><div class="result-score">⭐ ${points} / ${questions.length} correct</div><button class="next restart" id="restart" type="button">Blast off again <span aria-hidden="true">↻</span></button>`;
+      $("result").innerHTML = `<span class="result-emoji" aria-hidden="true">${mood[0]}</span><h2>${mood[1]}</h2><p>${mood[2]}</p><div class="result-score">⭐ ${points} / ${questions.length} correct</div><div class="result-actions"><button class="next" id="share" type="button">Share my score <span aria-hidden="true">↗</span></button><button class="next restart" id="restart" type="button">Blast off again <span aria-hidden="true">↻</span></button></div><p class="share-status" id="share-status" role="status" aria-live="polite" hidden></p>`;
       $("result").hidden = false;
+      $("share").addEventListener("click", shareResults);
       $("restart").addEventListener("click", restart);
       if (percent >= .7) burst(42);
+    }
+
+    function setShareStatus(message, state) {
+      const status = $("share-status");
+      status.textContent = message;
+      status.dataset.state = state;
+      status.hidden = !message;
+    }
+
+    async function shareResults() {
+      const message = `I scored ${points} out of ${questions.length} on the Space Explorer Quiz! Can you beat my score?`;
+      setShareStatus("", "");
+      if (typeof navigator.share === "function") {
+        try {
+          await navigator.share({ title: "Space Explorer Quiz", text: message });
+          setShareStatus("Score shared.", "success");
+        } catch (error) {
+          if (error && error.name === "AbortError") return;
+          setShareStatus("Could not share your score. Please try again.", "error");
+        }
+        return;
+      }
+
+      try {
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+          throw new Error("Clipboard API unavailable");
+        }
+        await navigator.clipboard.writeText(message);
+        setShareStatus("Score copied to clipboard.", "success");
+      } catch {
+        setShareStatus("Could not copy your score. Check clipboard permissions and try again.", "error");
+      }
     }
 
     function restart() {
