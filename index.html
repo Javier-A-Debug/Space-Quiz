@@ -386,6 +386,8 @@
       font-size: 15px;
       font-weight: 800;
     }
+    .result-best { margin: -10px 0 23px; color: var(--muted); font-size: 13px; font-weight: 700; }
+    .result-warning { color: var(--wrong) !important; }
     .restart { margin: 0 auto; }
     .confetti {
       position: fixed;
@@ -482,6 +484,7 @@
     let points = 0;
     let locked = false;
     const progress = document.querySelector('[role="progressbar"]');
+    const personalBestKey = "orbit-personal-best";
 
     function setTheme(theme) {
       const dark = theme === "dark";
@@ -553,6 +556,7 @@
     function showResults() {
       $("quiz").hidden = true;
       const percent = points / questions.length;
+      const personalBest = recordPersonalBest(points);
       const mood = percent === 1
         ? ["🏆", "Out of this world!", "Perfect score! You know your way around the cosmos."]
         : percent >= .7
@@ -560,10 +564,37 @@
           : percent >= .4
             ? ["🪐", "Nice orbit!", "You’re finding your way among the stars. Keep that curiosity shining."]
             : ["🌱", "Future astronaut!", "Every great explorer starts with a first mission. Ready for another?"];
-      $("result").innerHTML = `<span class="result-emoji" aria-hidden="true">${mood[0]}</span><h2>${mood[1]}</h2><p>${mood[2]}</p><div class="result-score">⭐ ${points} / ${questions.length} correct</div><button class="next restart" id="restart" type="button">Blast off again <span aria-hidden="true">↻</span></button>`;
+      const warning = personalBest.warning
+        ? `<p class="result-warning" role="status">${personalBest.warning}</p>`
+        : "";
+      $("result").innerHTML = `<span class="result-emoji" aria-hidden="true">${mood[0]}</span><h2>${mood[1]}</h2><p>${mood[2]}</p><div class="result-score">⭐ ${points} / ${questions.length} correct</div><div class="result-best">${personalBest.label}: ⭐ ${personalBest.score} / ${questions.length}</div>${warning}<button class="next restart" id="restart" type="button">Blast off again <span aria-hidden="true">↻</span></button>`;
       $("result").hidden = false;
       $("restart").addEventListener("click", restart);
       if (percent >= .7) burst(42);
+    }
+
+    function recordPersonalBest(score) {
+      let bestScore = score;
+      let warning = "";
+      let label = "Personal best";
+      try {
+        const saved = localStorage.getItem(personalBestKey);
+        const parsed = Number(saved);
+        const isValid = saved !== null
+            && /^\d+$/.test(saved)
+            && Number.isInteger(parsed)
+            && parsed >= 0
+            && parsed <= questions.length;
+        if (isValid && parsed >= score) {
+            bestScore = parsed;
+        } else {
+            localStorage.setItem(personalBestKey, String(score));
+        }
+      } catch {
+        label = "Best this run";
+        warning = "Browser storage is unavailable. This run’s score is shown, but your personal best could not be loaded or saved.";
+      }
+      return { score: bestScore, label, warning };
     }
 
     function restart() {
