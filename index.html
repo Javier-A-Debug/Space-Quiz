@@ -477,26 +477,36 @@
     ];
 
     const $ = (id) => document.getElementById(id);
+    function shuffledQuestions() {
+      const shuffled = [...questions];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    let runQuestions = shuffledQuestions();
     let current = 0;
     let points = 0;
     let locked = false;
     const progress = document.querySelector('[role="progressbar"]');
 
     function renderQuestion() {
-      const item = questions[current];
+      const item = runQuestions[current];
       locked = false;
-      $("question-count").textContent = `Question ${current + 1} of ${questions.length}`;
+      $("question-count").textContent = `Question ${current + 1} of ${runQuestions.length}`;
       $("score").textContent = `⭐ ${points} ${points === 1 ? "point" : "points"}`;
       $("category").textContent = item.category;
       $("planet").textContent = item.planet;
       $("question").textContent = item.question;
       $("feedback").hidden = true;
       $("next").hidden = true;
-      $("next").innerHTML = current === questions.length - 1
+      $("next").innerHTML = current === runQuestions.length - 1
         ? 'See my results <span aria-hidden="true">✨</span>'
         : 'Next question <span aria-hidden="true">→</span>';
       progress.setAttribute("aria-valuenow", current);
-      $("progress-fill").style.width = `${(current / questions.length) * 100}%`;
+      $("progress-fill").style.width = `${(current / runQuestions.length) * 100}%`;
       $("answers").replaceChildren(...item.answers.map((answer, index) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -513,7 +523,7 @@
     function chooseAnswer(index) {
       if (locked) return;
       locked = true;
-      const item = questions[current];
+      const item = runQuestions[current];
       const isCorrect = index === item.correct;
       const buttons = [...$("answers").querySelectorAll(".answer")];
       buttons.forEach((button, i) => {
@@ -535,13 +545,13 @@
       $("next").hidden = false;
       $("hint").textContent = "";
       progress.setAttribute("aria-valuenow", current + 1);
-      $("progress-fill").style.width = `${((current + 1) / questions.length) * 100}%`;
+      $("progress-fill").style.width = `${((current + 1) / runQuestions.length) * 100}%`;
       if (isCorrect) burst();
     }
 
     function showResults() {
       $("quiz").hidden = true;
-      const percent = points / questions.length;
+      const percent = points / runQuestions.length;
       const mood = percent === 1
         ? ["🏆", "Out of this world!", "Perfect score! You know your way around the cosmos."]
         : percent >= .7
@@ -549,7 +559,7 @@
           : percent >= .4
             ? ["🪐", "Nice orbit!", "You’re finding your way among the stars. Keep that curiosity shining."]
             : ["🌱", "Future astronaut!", "Every great explorer starts with a first mission. Ready for another?"];
-      $("result").innerHTML = `<span class="result-emoji" aria-hidden="true">${mood[0]}</span><h2>${mood[1]}</h2><p>${mood[2]}</p><div class="result-score">⭐ ${points} / ${questions.length} correct</div><button class="next restart" id="restart" type="button">Blast off again <span aria-hidden="true">↻</span></button>`;
+      $("result").innerHTML = `<span class="result-emoji" aria-hidden="true">${mood[0]}</span><h2>${mood[1]}</h2><p>${mood[2]}</p><div class="result-score">⭐ ${points} / ${runQuestions.length} correct</div><button class="next restart" id="restart" type="button">Blast off again <span aria-hidden="true">↻</span></button>`;
       $("result").hidden = false;
       $("restart").addEventListener("click", restart);
       if (percent >= .7) burst(42);
@@ -558,6 +568,7 @@
     function restart() {
       current = 0;
       points = 0;
+      runQuestions = shuffledQuestions();
       $("result").hidden = true;
       $("quiz").hidden = false;
       renderQuestion();
@@ -579,7 +590,7 @@
 
     $("next").addEventListener("click", () => {
       if (!locked) return;
-      if (current < questions.length - 1) {
+      if (current < runQuestions.length - 1) {
         current++;
         renderQuestion();
       } else {
